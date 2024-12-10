@@ -4,7 +4,7 @@
 
 Link to Docker Image : https://hub.docker.com/r/ranjit1706/wine-quality-testing
 
-![Wine Quality Testing](![Screenshot 2024-12-10 163042](https://github.com/user-attachments/assets/44228f4a-86cc-455f-9aab-0d33baaa3369)
+(![Screenshot 2024-12-10 163042](https://github.com/user-attachments/assets/44228f4a-86cc-455f-9aab-0d33baaa3369)
 )
 
 
