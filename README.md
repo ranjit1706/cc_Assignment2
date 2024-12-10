@@ -1,59 +1,40 @@
-##  Instruction to use:
+
+
 ---
 
-### 1. SSH into 4 Instances
-To SSH into your 4 instances, use the following command for each instance:
+Link to Docker Image : https://hub.docker.com/r/ranjit1706/wine-quality-testing
+
+## **Steps to Setup and Execute the Project**
+
+### **1. SSH into Instances**
+Log into your 4 instances using SSH. Replace `<instance-ip>` with the IP address of each instance.
 
 ```bash
 ssh -i /path/to/your/private-key.pem ubuntu@<instance-ip>
 ```
-Repeat this step for all 4 instances.
 
 ---
 
-### 2. Generate SSH Keys on All 4 Instances
-On each of the instances, execute the following commands:
+### **2. Generate SSH Keys**
+On each instance, generate an SSH key pair to enable passwordless communication.
 
 ```bash
 ssh-keygen -t rsa -N "" -f /home/ubuntu/.ssh/id_rsa
-cd ~/.ssh
-ls -lrt  # To see the generated keys
-cat ~/.ssh/id_rsa.pub  # To display the public key
+cat ~/.ssh/id_rsa.pub
 ```
 
-Make sure to note down the output of the `cat ~/.ssh/id_rsa.pub` command, as you will need to copy this public key to the other instances.
+Copy the public key from each instance and add it to the `authorized_keys` file of all other instances.
 
 ---
 
-### 3. Add Public Keys to `authorized_keys` on All 4 Instances
-On each instance, execute the following:
-
-1. Open the `authorized_keys` file in `vim`:
-
-```bash
-vim ~/.ssh/authorized_keys
-```
-
-2. Copy and paste the public keys from all 4 instances into this file. Each key should be on a new line.
-
----
-
-### 4. Edit `/etc/hosts` on All 4 Instances
-On each instance, add the following entries to `/etc/hosts` to define hostnames for each instance:
-
-1. First, navigate to the home directory:
-
-```bash
-cd
-```
-
-2. Open the `/etc/hosts` file in `vim`:
+### **3. Configure `/etc/hosts`**
+On each instance, map the hostnames of all instances in the `/etc/hosts` file.
 
 ```bash
 sudo vim /etc/hosts
 ```
 
-3. Add the following lines:
+Add the following entries (replace `<ip-address>` with actual instance IPs):
 
 ```
 <ip-address> nn
@@ -62,65 +43,47 @@ sudo vim /etc/hosts
 <ip-address> dd3
 ```
 
-Replace `<ip-address>` with the actual IP addresses of your instances.
-
 ---
 
-### 5. Install Java, Maven, and Spark 3.4.1 on All 4 Instances
-On each instance, install Java, Maven, and Spark as follows:
+### **4. Install Required Software**
+Install Java, Maven, and Spark on all instances.
 
-Install Java:
+**Install Java:**
 ```bash
 sudo apt update
-sudo apt install openjdk-11-jdk -y
-java -version  # To verify installation
+sudo apt install openjdk-8-jdk -y
 ```
 
-Install Maven:
+**Install Maven:**
 ```bash
 sudo apt install maven -y
-mvn -version  # To verify installation
 ```
 
-Install Spark 3.4.1:
-
-1. Download Spark from the official link (e.g., Spark 3.4.1):
+**Install Spark:**
+1. Download and extract Spark:
 ```bash
-wget https://archive.apache.org/dist/spark/spark-3.4.1/spark-3.4.1-bin-hadoop3.2.tgz
+wget https://archive.apache.org/dist/spark/spark-3.4.1/spark-3.4.1-bin-hadoop3.tgz
+tar -xvzf spark-3.4.1-bin-hadoop3.tgz
 ```
 
-2. Extract Spark:
+2. Set environment variables:
 ```bash
-tar -xvzf spark-3.4.1-bin-hadoop3.2.tgz
-```
-
-3. Set Spark environment variables:
-```bash
-echo "export SPARK_HOME=/home/ubuntu/spark-3.4.1-bin-hadoop3.2" >> ~/.bashrc
+echo "export SPARK_HOME=/home/ubuntu/spark-3.4.1-bin-hadoop3" >> ~/.bashrc
 echo "export PATH=\$SPARK_HOME/bin:\$PATH" >> ~/.bashrc
 source ~/.bashrc
 ```
 
 ---
 
-### 6. Copy `workers.template` to `workers`
-Now, copy the `workers.template` file to `workers`:
+### **5. Configure Spark Workers**
+Copy the `workers.template` file to `workers` and update it:
 
 ```bash
 cp $SPARK_HOME/conf/workers.template $SPARK_HOME/conf/workers
-```
-
----
-
-### 7. Edit `workers` File
-Open the `workers` file in `vim` and add the following lines after `localhost`:
-
-```bash
 vim $SPARK_HOME/conf/workers
 ```
 
-Add the following (replace `dd1/ip-address`, `dd2/ip-address`, `dd3/ip-address` with the actual IP addresses of your instances):
-
+Add the following lines:
 ```
 localhost
 dd1/ip-address
@@ -130,37 +93,33 @@ dd3/ip-address
 
 ---
 
-### 8. Install Spark 3.4.1, Java, and Maven
-Ensure that Spark, Java, and Maven are installed on all the instances as explained above.
-
----
-
-### 9. Create Folders for Training and Eval and Place Java Codes
-On each instance, create two folders named `Training` and `Eval`:
+### **6. Setup Training and Evaluation Directories**
+Create `Training` and `Eval` directories on all instances:
 
 ```bash
 mkdir ~/Training
 mkdir ~/Eval
 ```
 
-Place the respective Java code files (for training and evaluation) inside these folders.
+Place the Java code files for training and evaluation into these directories.
 
 ---
 
-### 10. Run the Training Code in Parallel Using `spark-submit`
-To run your training code using `spark-submit` on all instances in parallel, use the following command:
+### **7. Run the Training Code**
+Use the following command to execute the training code with Spark:
 
 ```bash
 spark-submit --master spark://<master-ip>:7077 --class com.example.WineQualityEval /home/ubuntu/Training/wine-quality-train-1.0-SNAPSHOT.jar
 ```
 
-Replace `<master-ip>` with the actual IP address of the Spark master instance.
+Replace `<master-ip>` with the Spark master instance's IP address.
 
 ---
 
-### 11. Create a Docker Image
-Once your code is ready and everything is configured, create a Docker image. Here’s the `Dockerfile` we previously worked on:
+### **8. Create a Docker Image**
+Create a Docker image to package your application.
 
+**Dockerfile:**
 ```dockerfile
 # Use the official Spark image as a base image
 FROM bitnami/spark:3.4.1
@@ -171,61 +130,44 @@ WORKDIR /app
 # Copy WineQualityEval (containing the JAR) to the container
 COPY WineQualityEval /app/WineQualityEval
 
-# Copy WineQualityPredictionModel to /home/ubuntu (matching the JAR's expected path)
+# Copy WineQualityPredictionModel to /home/ubuntu
 COPY WineQualityPredictionModel /home/ubuntu/WineQualityPredictionModel
 
-# Copy ValidationDataset.csv to /home/ubuntu (matching the JAR's expected path)
+# Copy ValidationDataset.csv to /home/ubuntu
 COPY ValidationDataset.csv /home/ubuntu/ValidationDataset.csv
 
-# Set the command to run your Spark job using spark-submit
+# Set the command to run your Spark job
 CMD ["spark-submit", "--master", "local", "--class", "com.example.WineQualityEval", "/app/WineQualityEval/target/wine-quality-eval-1.0-SNAPSHOT.jar"]
 ```
 
-To build the Docker image, run:
-
+**Build and Push Docker Image:**
 ```bash
-sudo docker build -t ranjitkotamraju/wine-quality-eval:latest .
+sudo docker build -t ranjit1706/wine-quality-testing:latest .
+sudo docker push ranjit1706/wine-quality-testing:latest
 ```
 
 ---
 
-### 12. Push the Docker Image
-Once the image is built, you can push it to Docker Hub:
+### **9. Pull and Run the Docker Image**
+Pull the Docker image on each instance:
 
 ```bash
-sudo docker push ranjitkotamraju/wine-quality-eval:latest
+sudo docker pull ranjit1706/wine-quality-testing:latest
 ```
 
-Make sure you're logged in to Docker Hub using:
+Run the container:
 
 ```bash
-sudo docker login
-```
-
----
-
-### 13. Pull the Docker Image on Desired Instances
-To pull the image on the desired instances, run the following command on each instance:
-
-```bash
-sudo docker pull ranjitkotamraju/wine-quality-eval:latest
+sudo docker run ranjit1706/wine-quality-testing:latest
 ```
 
 ---
 
-### 14. Run the Docker Container
-Once the image is pulled, you can run it with:
+### **10. Results**
+The F1 score of  validation dataset is:
 
-```bash
-sudo docker run -it --entrypoint /bin/bash ranjitkotamraju/wine-quality-eval:latest
+```
+F1 Score: 0.8104636591478698
 ```
 
-This will start the container and open a bash shell inside the container. You can then execute any further commands required.
-
 ---
-
-### 15. Run the Spark Job in Docker
-To run the Spark job within the Docker container, use the following command:
-
-```bash
-spark-submit --master spark://<master-ip>:7077 --class com.example.WineQualityEval /app/WineQualityEval/target/wine-quality-eval-1.0-SNAPSHOT.jar
